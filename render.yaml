@@ -1,0 +1,15 @@
+# Render Blueprint — deploys the NBA Prop Analyzer on Render's free tier.
+# In Render: New + → "Blueprint" → connect this repo → it reads this file.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: nba-prop-analyzer
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Render's Python 3.14 support lags; pin to a well-supported version
+      # that has prebuilt numpy/pandas wheels.
+      - key: PYTHON_VERSION
+        value: "3.12.8"

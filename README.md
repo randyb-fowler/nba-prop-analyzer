@@ -115,6 +115,32 @@ Example:
 curl "http://127.0.0.1:8000/api/analyze?player=LeBron+James&stat=PTS&line=24.5&over=true"
 ```
 
+## Deploying live (free)
+
+The app is ready to deploy as-is. Config files included:
+
+- `render.yaml` — [Render](https://render.com) Blueprint (recommended, free tier)
+- `Procfile` + `runtime.txt` — works on Railway, Heroku-style platforms
+
+### Deploy to Render (recommended)
+
+1. Push this repo to GitHub (see above).
+2. Go to [dashboard.render.com](https://dashboard.render.com) → **New +** → **Blueprint**.
+3. Connect your GitHub and select this repo. Render reads `render.yaml`
+   automatically — name, build command, start command, and Python version are
+   all preconfigured.
+4. Click **Apply**. First build takes a few minutes (installs numpy/pandas).
+5. You get a public URL like `https://nba-prop-analyzer.onrender.com`.
+
+> Free-tier services sleep after ~15 min idle and take ~30s to wake on the next
+> request. Fine for a portfolio demo.
+
+The production start command (used by every platform) is:
+
+```bash
+uvicorn api.app:app --host 0.0.0.0 --port $PORT
+```
+
 ## Running the tests
 
 ```bash
