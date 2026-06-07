@@ -1,8 +1,12 @@
 # 🏀 NBA Prop Analyzer
 
+[![Live Demo](https://img.shields.io/badge/live%20demo-online-brightgreen.svg)](https://nba-prop-analyzer-w19a.onrender.com)
 [![CI](https://github.com/randyb-fowler/nba-prop-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/randyb-fowler/nba-prop-analyzer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+
+**🔗 Live demo: https://nba-prop-analyzer-w19a.onrender.com**
+*(free tier — first load may take ~50s while the server wakes up)*
 
 A web app that analyzes NBA player prop bets using **live game data**. Enter a
 player, a stat, and a betting line — it returns hit rates over recent windows,
@@ -97,8 +101,8 @@ Analyses are linkable — the app auto-runs from URL query params, so you can
 share a specific prop directly:
 
 ```
-http://127.0.0.1:8000/?player=Nikola+Jokic&stat=PRA&line=48.5
-http://127.0.0.1:8000/?player=LeBron+James&compare=Stephen+Curry&stat=PTS&line=24.5
+https://nba-prop-analyzer-w19a.onrender.com/?player=Nikola+Jokic&stat=PRA&line=48.5
+https://nba-prop-analyzer-w19a.onrender.com/?player=LeBron+James&compare=Stephen+Curry&stat=PTS&line=24.5
 ```
 
 ---
