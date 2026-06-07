@@ -7,6 +7,8 @@ home/away splits, a full game log, and a recommended lean (Over / Under / Pass).
 This is how real prop research tools (PropFinder, Outlier) work: instead of
 guessing, you see how often a player has actually cleared a line.
 
+![NBA Prop Analyzer screenshot](docs/screenshot.png)
+
 > ⚠️ Educational / portfolio project. **Not betting advice.**
 
 ---
@@ -84,6 +86,16 @@ Then open **http://127.0.0.1:8000** in your browser.
 
 Type a player (e.g. *Nikola Jokic*), pick a stat (e.g. *PRA*), enter a line
 (e.g. *48.5*), choose Over/Under, and hit **Analyze**.
+
+### Shareable links
+
+Analyses are linkable — the app auto-runs from URL query params, so you can
+share a specific prop directly:
+
+```
+http://127.0.0.1:8000/?player=Nikola+Jokic&stat=PRA&line=48.5
+http://127.0.0.1:8000/?player=LeBron+James&compare=Stephen+Curry&stat=PTS&line=24.5
+```
 
 ---
 

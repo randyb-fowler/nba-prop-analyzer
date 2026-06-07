@@ -41,9 +41,28 @@ async function loadSeasons() {
   }
 }
 
-loadStats();
-loadTeams();
-loadSeasons();
+// Load all dropdowns, then auto-run if the URL carries query params
+// (shareable links, e.g. /?player=Nikola+Jokic&stat=PRA&line=48.5).
+(async () => {
+  await Promise.all([loadStats(), loadTeams(), loadSeasons()]);
+  applyUrlParams();
+})();
+
+function applyUrlParams() {
+  const p = new URLSearchParams(location.search);
+  if (!p.get("player") || !p.get("line")) return;
+
+  const set = (id, val) => { if (val != null) document.getElementById(id).value = val; };
+  set("player", p.get("player"));
+  set("player-b", p.get("compare"));
+  set("line", p.get("line"));
+  if (p.get("stat")) statSelect.value = p.get("stat").toUpperCase();
+  if (p.get("over")) document.getElementById("over").value = p.get("over");
+  if (p.get("opponent")) oppSelect.value = p.get("opponent").toUpperCase();
+  if (p.get("season")) seasonSelect.value = p.get("season");
+
+  form.requestSubmit();
+}
 
 // --- Player autocomplete (shared helper for both inputs) ------------------
 
