@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nba-prop-analyzer",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "uvicorn", "api.app:app", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}

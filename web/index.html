@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NBA Prop Analyzer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>🏀 NBA Prop Analyzer</h1>
+    <p class="tagline">Hit rates, splits, venues &amp; injuries — powered by live NBA data</p>
+  </header>
+
+  <main>
+    <form id="prop-form" class="card">
+      <div class="row">
+        <div class="field">
+          <label for="player">Player</label>
+          <input id="player" name="player" list="player-list" placeholder="LeBron James" autocomplete="off" required>
+          <datalist id="player-list"></datalist>
+        </div>
+        <div class="field">
+          <label for="player-b">Compare vs (optional)</label>
+          <input id="player-b" name="player-b" list="player-list-b" placeholder="Stephen Curry" autocomplete="off">
+          <datalist id="player-list-b"></datalist>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field small">
+          <label for="stat">Stat</label>
+          <select id="stat" name="stat"></select>
+        </div>
+        <div class="field small">
+          <label for="line">Line</label>
+          <input id="line" name="line" type="number" step="0.5" placeholder="24.5" required>
+        </div>
+        <div class="field small">
+          <label for="over">Bet</label>
+          <select id="over" name="over">
+            <option value="true">Over</option>
+            <option value="false">Under</option>
+          </select>
+        </div>
+        <div class="field small">
+          <label for="opponent">Opponent (optional)</label>
+          <select id="opponent" name="opponent">
+            <option value="">Any</option>
+          </select>
+        </div>
+        <div class="field small">
+          <label for="season">Season</label>
+          <select id="season" name="season"></select>
+        </div>
+        <button type="submit">Analyze</button>
+      </div>
+    </form>
+
+    <div id="status" class="status"></div>
+    <section id="results" class="hidden"></section>
+  </main>
+
+  <footer>
+    <p>Built with FastAPI + nba_api · injuries via ESPN · for educational/portfolio use · not betting advice</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

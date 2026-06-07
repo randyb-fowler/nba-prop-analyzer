@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
+
+# Local Claude settings (machine-specific)
+.claude/settings.local.json
+
+# Unrelated sibling project living in this folder
+Randezy/
