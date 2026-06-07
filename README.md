@@ -1,5 +1,9 @@
 # 🏀 NBA Prop Analyzer
 
+[![CI](https://github.com/randyb-fowler/nba-prop-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/randyb-fowler/nba-prop-analyzer/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+
 A web app that analyzes NBA player prop bets using **live game data**. Enter a
 player, a stat, and a betting line — it returns hit rates over recent windows,
 home/away splits, a full game log, and a recommended lean (Over / Under / Pass).
@@ -201,6 +205,10 @@ This is intentionally transparent and easy to tune — see `_lean()` in
 - [ ] Daily slate view: today's games and auto-pulled prop lines
 
 ---
+
+## License
+
+[MIT](LICENSE) © 2026 Randy Blake Fowler
 
 ## Disclaimer
 
