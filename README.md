@@ -26,6 +26,7 @@ guessing, you see how often a player has actually cleared a line.
 - 🔎 **Player search** with live autocomplete (active NBA players)
 - 📊 **Hit rates** over last 5, last 10, and the full season
 - 🏠 **Home vs. away splits** — often the difference on a prop
+- 🗓️ **Today's slate** — see the day's NBA games, expand a team's roster, and click a player to jump into the analyzer with the opponent pre-filled
 - 🗓️ **Season selector** — analyze any season from 2020-21 to 2025-26
 - 🆚 **Opponent splits** — filter to "how does he do vs. this team?"
 - ⚔️ **Player comparison** — two players head-to-head on the same line, winner highlighted
@@ -128,6 +129,8 @@ python main.py "LeBron James"
 | `GET /api/analyze?player=...&stat=PTS&line=24.5&over=true&opponent=BOS&season=2024-25` | Full prop analysis (opponent + season optional) |
 | `GET /api/compare?player_a=...&player_b=...&stat=PTS&line=24.5&over=true&season=2024-25` | Two players head-to-head |
 | `GET /api/injuries?team=LAL`                         | Team injury report (via ESPN)     |
+| `GET /api/slate?date=2025-01-15`                     | Games on a date (defaults today)  |
+| `GET /api/roster?team=BOS`                           | A team's roster                   |
 
 Example:
 

@@ -41,6 +41,88 @@ async function loadSeasons() {
   }
 }
 
+// --- Today's slate -------------------------------------------------------
+
+const slateDate = document.getElementById("slate-date");
+const slateGames = document.getElementById("slate-games");
+
+async function loadSlate(dateStr) {
+  slateGames.textContent = "Loading games…";
+  try {
+    const url = dateStr ? `/api/slate?date=${dateStr}` : "/api/slate";
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!slateDate.value && data.date) slateDate.value = data.date;
+    renderSlate(data);
+  } catch {
+    slateGames.textContent = "Could not load the slate right now.";
+  }
+}
+
+function renderSlate(data) {
+  if (!data.games || data.games.length === 0) {
+    slateGames.innerHTML =
+      `<div class="slate-empty">No games on ${data.date}. Pick a date during the season (Oct–Jun).</div>`;
+    return;
+  }
+  slateGames.innerHTML = data.games
+    .map((g, i) => `
+      <div class="game">
+        <div class="game-top">
+          <button class="team-btn" data-team="${g.away}" data-opp="${g.home}" data-g="${i}">${g.away}</button>
+          <span class="at">@</span>
+          <button class="team-btn" data-team="${g.home}" data-opp="${g.away}" data-g="${i}">${g.home}</button>
+          <span class="game-status">${g.status}</span>
+        </div>
+        <div class="roster" id="roster-${i}-${g.away}" hidden></div>
+        <div class="roster" id="roster-${i}-${g.home}" hidden></div>
+      </div>`)
+    .join("");
+
+  slateGames.querySelectorAll(".team-btn").forEach((btn) => {
+    btn.addEventListener("click", () => toggleRoster(btn));
+  });
+}
+
+async function toggleRoster(btn) {
+  const team = btn.dataset.team;
+  const opp = btn.dataset.opp;
+  const box = document.getElementById(`roster-${btn.dataset.g}-${team}`);
+  if (!box.hidden) { box.hidden = true; return; }
+
+  // Collapse the sibling roster in this game.
+  box.parentElement.querySelectorAll(".roster").forEach((r) => { r.hidden = true; });
+
+  box.hidden = false;
+  box.textContent = "Loading roster…";
+  try {
+    const res = await fetch(`/api/roster?team=${team}`);
+    const data = await res.json();
+    box.innerHTML = data.players
+      .map((p) => `<button class="player-chip" data-name="${p.name}" data-opp="${opp}">${p.name}</button>`)
+      .join("");
+    box.querySelectorAll(".player-chip").forEach((chip) => {
+      chip.addEventListener("click", () => pickFromSlate(chip.dataset.name, chip.dataset.opp));
+    });
+  } catch {
+    box.textContent = "Could not load roster.";
+  }
+}
+
+function pickFromSlate(name, opp) {
+  document.getElementById("player").value = name;
+  document.getElementById("player-b").value = "";
+  oppSelect.value = opp;
+  document.getElementById("prop-form").scrollIntoView({ behavior: "smooth", block: "center" });
+  const line = document.getElementById("line");
+  line.focus();
+  statusEl.className = "status";
+  statusEl.textContent = `Loaded ${name} vs ${opp} — enter a line and hit Analyze.`;
+}
+
+slateDate.addEventListener("change", () => loadSlate(slateDate.value));
+loadSlate();
+
 // Load all dropdowns, then auto-run if the URL carries query params
 // (shareable links, e.g. /?player=Nikola+Jokic&stat=PRA&line=48.5).
 (async () => {

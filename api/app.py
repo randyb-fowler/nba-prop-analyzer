@@ -14,6 +14,7 @@ from nba_api.stats.static import players
 from src.nba_stats import _normalize
 from src.props import analyze_prop, supported_stats, supported_seasons, DEFAULT_SEASON
 from src.injuries import get_team_injuries
+from src.slate import get_slate, get_roster
 from src.teams import TEAMS
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
@@ -97,6 +98,26 @@ def injuries(team: str = Query(..., min_length=2)):
         return get_team_injuries(team.upper())
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Injury source error: {e}")
+
+
+@app.get("/api/slate")
+def slate(date: str | None = Query(None, description="YYYY-MM-DD; defaults to today")):
+    """The NBA games scheduled on a date (defaults to today)."""
+    try:
+        return get_slate(date)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Slate source error: {e}")
+
+
+@app.get("/api/roster")
+def roster(team: str = Query(..., min_length=2)):
+    """A team's roster (for picking a player off the slate)."""
+    try:
+        return get_roster(team)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Roster source error: {e}")
 
 
 @app.get("/")
