@@ -12,6 +12,7 @@ from datetime import date
 from nba_api.stats.endpoints import scoreboardv3, commonteamroster
 from nba_api.stats.static import teams as static_teams
 
+from src.cache import ttl_cache
 from src.props import DEFAULT_SEASON
 
 
@@ -19,6 +20,7 @@ def _today() -> str:
     return date.today().strftime("%Y-%m-%d")
 
 
+@ttl_cache(600)  # today's slate can change (scores/status); 10 min is safe
 def get_slate(game_date: str | None = None) -> dict:
     """Return the games scheduled on a date (defaults to today).
 
@@ -53,6 +55,7 @@ def _team_id(team_abbr: str):
     return found["id"] if found else None
 
 
+@ttl_cache(21600)  # rosters rarely change mid-season; 6h
 def get_roster(team_abbr: str, season: str = DEFAULT_SEASON) -> dict:
     """Return a team's roster as {"team": abbr, "players": [{id, name}]}."""
     team_abbr = team_abbr.upper()

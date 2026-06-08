@@ -13,6 +13,7 @@ from statistics import median
 
 from nba_api.stats.endpoints import playergamelog
 
+from src.cache import ttl_cache
 from src.nba_stats import find_player
 from src.teams import venue
 
@@ -47,6 +48,7 @@ def supported_stats() -> list[str]:
     return list(STAT_DEFINITIONS.keys())
 
 
+@ttl_cache(3600)  # game logs change at most once a day; 1h is plenty
 def get_full_game_log(player_id: int, season: str = DEFAULT_SEASON) -> list[dict]:
     """Return every game this season as enriched rows (most recent first)."""
     log = playergamelog.PlayerGameLog(

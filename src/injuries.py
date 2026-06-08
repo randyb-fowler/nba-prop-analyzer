@@ -7,12 +7,14 @@ degrade gracefully to {"available": False, ...} rather than raising.
 
 import requests
 
+from src.cache import ttl_cache
 from src.nba_stats import _normalize
 from src.teams import team_name
 
 ESPN_INJURIES_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/injuries"
 
 
+@ttl_cache(900)  # injury reports update through the day; 15 min
 def get_team_injuries(team_abbr: str) -> dict:
     """Return current injuries for a team by NBA abbreviation (e.g. 'LAL').
 
