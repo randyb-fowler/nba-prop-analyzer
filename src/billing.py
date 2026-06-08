@@ -29,29 +29,40 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 _ACTIVE_STATUSES = {"active", "trialing"}
 
 
-def apply_subscription_event(event: dict) -> dict | None:
+def _field(obj, key):
+    """Safe item access that works for both plain dicts and Stripe's
+    StripeObject (which raises on missing keys and lacks `.get`)."""
+    try:
+        return obj[key]
+    except (KeyError, TypeError):
+        return None
+
+
+def apply_subscription_event(event) -> dict | None:
     """Translate a Stripe event into a normalized state change, or None to ignore.
 
-    Returns {"user_id": int|None, "customer_id": str|None, "is_pro": bool}.
+    Accepts a plain dict or a Stripe StripeObject. Returns
+    {"user_id": int|None, "customer_id": str|None, "is_pro": bool}.
     """
-    event_type = event.get("type")
-    obj = event.get("data", {}).get("object", {})
+    event_type = _field(event, "type")
+    data = _field(event, "data") or {}
+    obj = _field(data, "object") or {}
 
     if event_type == "checkout.session.completed":
-        ref = obj.get("client_reference_id")
+        ref = _field(obj, "client_reference_id")
         return {
             "user_id": int(ref) if ref else None,
-            "customer_id": obj.get("customer"),
+            "customer_id": _field(obj, "customer"),
             "is_pro": True,
         }
     if event_type == "customer.subscription.updated":
         return {
             "user_id": None,
-            "customer_id": obj.get("customer"),
-            "is_pro": obj.get("status") in _ACTIVE_STATUSES,
+            "customer_id": _field(obj, "customer"),
+            "is_pro": _field(obj, "status") in _ACTIVE_STATUSES,
         }
     if event_type == "customer.subscription.deleted":
-        return {"user_id": None, "customer_id": obj.get("customer"), "is_pro": False}
+        return {"user_id": None, "customer_id": _field(obj, "customer"), "is_pro": False}
     return None
 
 

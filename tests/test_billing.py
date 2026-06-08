@@ -37,6 +37,25 @@ def test_subscription_deleted_revokes_pro():
     assert apply_subscription_event(event)["is_pro"] is False
 
 
+class StripeLike:
+    """Mimics Stripe's StripeObject: supports obj[key], raises KeyError on
+    missing keys, and has NO .get method (the bug that broke the webhook)."""
+    def __init__(self, d):
+        self._d = {k: (StripeLike(v) if isinstance(v, dict) else v) for k, v in d.items()}
+
+    def __getitem__(self, k):
+        return self._d[k]  # raises KeyError if missing, like StripeObject
+
+
+def test_handles_stripe_object_without_get():
+    event = StripeLike({
+        "type": "checkout.session.completed",
+        "data": {"object": {"client_reference_id": "7", "customer": "cus_77"}},
+    })
+    out = apply_subscription_event(event)
+    assert out == {"user_id": 7, "customer_id": "cus_77", "is_pro": True}
+
+
 def test_unknown_event_ignored():
     assert apply_subscription_event({"type": "invoice.paid", "data": {"object": {}}}) is None
 
