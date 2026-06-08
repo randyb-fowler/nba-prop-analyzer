@@ -390,3 +390,9 @@ footer {
   font-size: 0.8rem;
   padding: 2rem 1rem;
 }
+.credit a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+.credit a:hover { text-decoration: underline; }
