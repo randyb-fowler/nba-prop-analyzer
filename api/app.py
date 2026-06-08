@@ -7,6 +7,11 @@ Run with:  python -m uvicorn api.app:app --reload
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load .env before importing modules that read env vars at import time.
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
