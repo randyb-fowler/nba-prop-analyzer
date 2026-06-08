@@ -58,6 +58,72 @@ async function loadAccount() {
   }
   renderAccount();
   applyGating();
+  refreshWatchlist();
+}
+
+// --- Watchlist (Pro) -----------------------------------------------------
+
+const watchlistEl = document.getElementById("watchlist");
+
+async function refreshWatchlist() {
+  if (!currentUser.is_pro) { watchlistEl.classList.add("hidden"); watchlistEl.innerHTML = ""; return; }
+  watchlistEl.classList.remove("hidden");
+  try {
+    const data = await (await fetch("/api/watchlist")).json();
+    renderWatchlist(data.items || []);
+  } catch {
+    watchlistEl.innerHTML = `<p class="muted">Could not load watchlist.</p>`;
+  }
+}
+
+function renderWatchlist(items) {
+  const head = `<div class="slate-head"><h2>⭐ My Watchlist</h2>${items.length ? `<button id="scan-btn" class="btn-upgrade">Scan for edges</button>` : ""}</div>`;
+  if (!items.length) {
+    watchlistEl.innerHTML = head + `<p class="muted">Track players from an analysis below to watch their live lines here.</p>`;
+    return;
+  }
+  const rows = items.map((i) =>
+    `<div class="wl-item"><span class="wl-name">${i.player_name} · ${i.stat}</span><span class="wl-info" id="wl-info-${i.id}"></span><button class="btn-plain wl-del" data-id="${i.id}">✕</button></div>`
+  ).join("");
+  watchlistEl.innerHTML = head + `<div class="wl-list">${rows}</div>`;
+  document.getElementById("scan-btn")?.addEventListener("click", scanWatchlist);
+  watchlistEl.querySelectorAll(".wl-del").forEach((b) =>
+    b.addEventListener("click", () => removeTrack(b.dataset.id)));
+}
+
+async function trackPlayer(player, stat) {
+  try {
+    const params = new URLSearchParams({ player, stat });
+    const res = await fetch(`/api/watchlist?${params}`, { method: "POST" });
+    if (!res.ok) throw new Error((await res.json()).detail || "Failed");
+    await refreshWatchlist();
+    const btn = document.getElementById("track-btn");
+    if (btn) { btn.textContent = "★ Tracked"; btn.disabled = true; }
+  } catch (e) { alert(e.message); }
+}
+
+async function removeTrack(id) {
+  await fetch(`/api/watchlist/${id}`, { method: "DELETE" });
+  await refreshWatchlist();
+}
+
+async function scanWatchlist() {
+  const btn = document.getElementById("scan-btn");
+  if (btn) { btn.textContent = "Scanning…"; btn.disabled = true; }
+  try {
+    const data = await (await fetch("/api/watchlist/scan")).json();
+    (data.results || []).forEach((r) => {
+      const el = document.getElementById(`wl-info-${r.id}`);
+      if (!el) return;
+      if (!r.available) { el.innerHTML = `<span class="muted">no live line</span>`; return; }
+      const cls = r.side === "OVER" ? "OVER" : r.side === "UNDER" ? "UNDER" : "PASS";
+      const flag = r.flagged ? "🔥 " : "";
+      const dfn = r.matchup && r.matchup.available ? ` · ${r.matchup.difficulty} D` : "";
+      el.innerHTML = `<span class="lean ${cls}">${flag}${r.side} ${r.line}</span> <span class="muted">avg ${r.season_avg} (${r.edge >= 0 ? "+" : ""}${r.edge})${dfn}</span>`;
+    });
+  } finally {
+    if (btn) { btn.textContent = "Scan for edges"; btn.disabled = false; }
+  }
 }
 
 function renderAccount() {
@@ -501,6 +567,8 @@ async function renderSingle(d, odds, matchup) {
       <span class="lean ${d.lean}">${d.lean}</span>
     </div>
 
+    ${currentUser.is_pro ? `<button id="track-btn" class="btn-plain">★ Track ${d.player} ${d.stat}</button>` : ""}
+
     ${liveLineBlock(d, odds)}
 
     ${matchupBlock(matchup, d.stat)}
@@ -516,6 +584,7 @@ async function renderSingle(d, odds, matchup) {
     ${gameLogTable(d)}`;
 
   resultsEl.classList.remove("hidden");
+  document.getElementById("track-btn")?.addEventListener("click", () => trackPlayer(d.player, d.stat));
 }
 
 function comparePanel(d) {

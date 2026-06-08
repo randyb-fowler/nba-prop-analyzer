@@ -28,9 +28,11 @@ from src.defense import get_matchup
 from src.injuries import get_team_injuries
 from src.slate import get_slate, get_roster
 from src.teams import TEAMS
-from src.db import init_db
+from src.db import init_db, get_db, WatchlistItem
 from src.auth import router as auth_router, get_current_user, user_payload, require_pro
 from src.billing import router as billing_router
+from src.watchlist import scan_item
+from sqlalchemy import select
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -137,6 +139,67 @@ def odds(
     if not line:
         return {"available": False, "reason": "No live line for this player/stat."}
     return {"available": True, **line}
+
+
+@app.get("/api/watchlist")
+def watchlist_list(user=Depends(require_pro), db=Depends(get_db)):
+    """The current user's tracked players (Pro)."""
+    items = db.scalars(
+        select(WatchlistItem).where(WatchlistItem.user_id == user.id)
+        .order_by(WatchlistItem.created_at.desc())
+    ).all()
+    return {"items": [
+        {"id": i.id, "player_name": i.player_name, "player_id": i.player_id, "stat": i.stat}
+        for i in items
+    ]}
+
+
+@app.post("/api/watchlist")
+def watchlist_add(
+    player: str = Query(..., min_length=1),
+    stat: str = Query(...),
+    user=Depends(require_pro),
+    db=Depends(get_db),
+):
+    """Track a player+stat (Pro). Idempotent on (user, player, stat)."""
+    try:
+        p = find_player(player)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    stat = stat.upper()
+    existing = db.scalar(select(WatchlistItem).where(
+        WatchlistItem.user_id == user.id,
+        WatchlistItem.player_id == p["id"],
+        WatchlistItem.stat == stat,
+    ))
+    if existing:
+        return {"id": existing.id, "already": True}
+    item = WatchlistItem(user_id=user.id, player_name=p["full_name"], player_id=p["id"], stat=stat)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return {"id": item.id, "already": False}
+
+
+@app.delete("/api/watchlist/{item_id}")
+def watchlist_remove(item_id: int, user=Depends(require_pro), db=Depends(get_db)):
+    """Untrack an item the user owns (Pro)."""
+    item = db.get(WatchlistItem, item_id)
+    if not item or item.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Not found.")
+    db.delete(item)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/watchlist/scan")
+def watchlist_scan(user=Depends(require_pro), db=Depends(get_db)):
+    """Scan tracked players for live edges (Pro)."""
+    items = db.scalars(select(WatchlistItem).where(WatchlistItem.user_id == user.id)).all()
+    results = [scan_item({
+        "id": i.id, "player_name": i.player_name, "player_id": i.player_id, "stat": i.stat,
+    }) for i in items]
+    return {"results": results}
 
 
 @app.get("/api/defense")

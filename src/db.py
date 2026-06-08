@@ -46,6 +46,17 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class WatchlistItem(Base):
+    __tablename__ = "watchlist"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(index=True)
+    player_name: Mapped[str] = mapped_column(String(255))
+    player_id: Mapped[int] = mapped_column()
+    stat: Mapped[str] = mapped_column(String(8))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 def init_db() -> None:
     """Create tables if they don't exist (no migrations for v1)."""
     Base.metadata.create_all(bind=engine)

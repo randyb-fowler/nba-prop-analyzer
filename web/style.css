@@ -238,6 +238,22 @@ input:disabled, select:disabled {
   padding: 0;
 }
 
+/* Watchlist */
+.wl-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.wl-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+}
+.wl-name { font-weight: 700; flex: 0 0 auto; }
+.wl-info { flex: 1 1 auto; font-size: 0.85rem; }
+.wl-del { margin-left: auto; }
+#track-btn { margin-bottom: 1rem; }
+
 /* Status */
 .status {
   text-align: center;
