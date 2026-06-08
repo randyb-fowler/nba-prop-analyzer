@@ -9,7 +9,8 @@ game log and hits no network -- this keeps it unit-testable. `analyze_prop`
 is the thin wrapper that fetches live data and delegates to it.
 """
 
-from statistics import median
+from datetime import datetime
+from statistics import median, pstdev
 
 from nba_api.stats.endpoints import playergamelog
 
@@ -129,6 +130,44 @@ def _host_team(game: dict) -> str:
     return game["team"] if game["is_home"] else game["opponent"]
 
 
+def parse_game_date(s: str):
+    """Parse an nba_api game date like 'APR 11, 2025' into a date, or None."""
+    try:
+        return datetime.strptime(s.strip(), "%b %d, %Y").date()
+    except (ValueError, AttributeError):
+        return None
+
+
+def _rest_splits(valued: list[dict], line: float, over: bool) -> dict:
+    """Split performance by rest: back-to-back (1 day) vs rested (2+ days).
+
+    `valued` is newest-first; a game's rest is the gap to the next-older game.
+    """
+    b2b, rested = [], []
+    for i in range(len(valued) - 1):
+        d_new = parse_game_date(valued[i]["date"])
+        d_old = parse_game_date(valued[i + 1]["date"])
+        if not (d_new and d_old):
+            continue
+        gap = (d_new - d_old).days
+        (b2b if gap == 1 else rested).append(valued[i]["value"])
+    return {
+        "b2b": _hit_rate(b2b, line, over),
+        "rested": _hit_rate(rested, line, over),
+    }
+
+
+def _confidence(games: int, stdev: float, avg: float) -> str:
+    """Rough confidence from sample size and consistency."""
+    if games < 10:
+        return "Low"
+    # Coefficient of variation: lower spread relative to the mean = steadier.
+    cv = (stdev / avg) if avg else 1.0
+    if games >= 25 and cv < 0.35:
+        return "High"
+    return "Medium"
+
+
 def analyze_from_games(player_name: str, player_id, games: list[dict], stat: str,
                        line: float, over: bool = True, season: str = DEFAULT_SEASON,
                        opponent: str | None = None) -> dict:
@@ -155,7 +194,11 @@ def analyze_from_games(player_name: str, player_id, games: list[dict], stat: str
         "last5": _hit_rate(last5, line, over),
         "home": _hit_rate(home_values, line, over),
         "away": _hit_rate(away_values, line, over),
+        **_rest_splits(valued, line, over),
     }
+
+    stdev = round(pstdev(all_values), 1) if len(all_values) >= 2 else 0.0
+    confidence = _confidence(season_stats["games"], stdev, season_stats["avg"])
 
     # Optional opponent split.
     opp_split = None
@@ -198,6 +241,8 @@ def analyze_from_games(player_name: str, player_id, games: list[dict], stat: str
         "median": median(all_values) if all_values else 0,
         "high": max(all_values) if all_values else 0,
         "low": min(all_values) if all_values else 0,
+        "stdev": stdev,
+        "confidence": confidence,
         "game_log": game_log,
     }
 

@@ -137,6 +137,27 @@ def test_analyze_away_venue_is_opponent_arena():
     res = analyze_from_games("P", 1, games, "PTS", 25.0)
     assert res["game_log"][0]["arena"] == "TD Garden"  # away -> Celtics' arena
 
+def test_analyze_rest_splits():
+    # newest-first; gaps: g0-g1=1d (b2b), g1-g2=3d (rested), g2-g3=1d (b2b)
+    games = [
+        make_game(pts=30, date="Jan 10, 2025"),
+        make_game(pts=20, date="Jan 09, 2025"),
+        make_game(pts=10, date="Jan 06, 2025"),
+        make_game(pts=40, date="Jan 05, 2025"),
+    ]
+    res = analyze_from_games("P", 1, games, "PTS", 25.0, over=True)
+    assert res["summary"]["b2b"]["games"] == 2     # g0, g2
+    assert res["summary"]["rested"]["games"] == 1   # g1
+
+
+def test_analyze_includes_stdev_and_confidence():
+    games = [make_game(pts=p) for p in (20, 22, 24, 26, 28)]
+    res = analyze_from_games("P", 1, games, "PTS", 25.0)
+    assert res["stdev"] > 0
+    assert res["confidence"] in ("Low", "Medium", "High")
+    assert res["confidence"] == "Low"  # only 5 games
+
+
 def test_analyze_rejects_bad_stat():
     try:
         analyze_from_games("P", 1, [make_game()], "XYZ", 10.0)

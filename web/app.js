@@ -347,6 +347,8 @@ function summaryCards(d) {
   if (d.opponent_split && d.opponent_split.games > 0) {
     cards.push(statCard(`vs ${d.opponent_split.opponent}`, d.opponent_split));
   }
+  if (sum.b2b && sum.b2b.games > 0) cards.push(statCard("Back-to-back", sum.b2b));
+  if (sum.rested && sum.rested.games > 0) cards.push(statCard("Rested (2+ days)", sum.rested));
   return `<div class="cards">${cards.join("")}</div>`;
 }
 
@@ -427,25 +429,36 @@ function fmtPrice(p) {
   return p > 0 ? `+${p}` : `${p}`;
 }
 
-// "Live Line" card: the real book line vs the player's season avg.
+// "Live Line" card: consensus line + edge + line shopping across books.
 function liveLineBlock(d, odds) {
   if (!odds || !odds.available) return "";
   const edge = Math.round((d.summary.season.avg - odds.line) * 10) / 10;
   const dir = edge > 0 ? "OVER" : edge < 0 ? "UNDER" : "EVEN";
   const cls = edge > 0 ? "OVER" : edge < 0 ? "UNDER" : "PASS";
   const game = odds.away && odds.home ? `${odds.away} @ ${odds.home}` : "";
+
+  const bestOver = odds.best_over
+    ? `<span class="ll-best">Best OVER: <b>${fmtPrice(odds.best_over.over_price)}</b> @ ${odds.best_over.book} (${odds.best_over.line})</span>` : "";
+  const bestUnder = odds.best_under
+    ? `<span class="ll-best">Best UNDER: <b>${fmtPrice(odds.best_under.under_price)}</b> @ ${odds.best_under.book} (${odds.best_under.line})</span>` : "";
+
+  const rows = (odds.books || [])
+    .map((b) => `<tr><td>${b.book}</td><td class="num">${b.line}</td><td class="num">${fmtPrice(b.over_price)}</td><td class="num">${fmtPrice(b.under_price)}</td></tr>`)
+    .join("");
+  const shop = rows
+    ? `<table class="ll-table"><thead><tr><th>Book</th><th class="num">Line</th><th class="num">O</th><th class="num">U</th></tr></thead><tbody>${rows}</tbody></table>`
+    : "";
+
   return `
-    <div class="section-title">📈 Live Line</div>
+    <div class="section-title">📈 Live Line${game ? " · " + game : ""}</div>
     <div class="liveline">
       <div class="ll-main">
-        <span class="ll-book">${odds.book}</span>
         <span class="ll-line">${d.stat} ${odds.line}</span>
-        <span class="ll-prices">O ${fmtPrice(odds.over_price)} / U ${fmtPrice(odds.under_price)}</span>
-      </div>
-      <div class="ll-edge">
         <span class="lean ${cls}">${dir} edge</span>
-        <span class="muted">season avg ${d.summary.season.avg} (${edge >= 0 ? "+" : ""}${edge} vs book)${game ? " · " + game : ""}</span>
+        <span class="muted">season avg ${d.summary.season.avg} (${edge >= 0 ? "+" : ""}${edge} vs book)</span>
       </div>
+      <div class="ll-best-row">${bestOver}${bestUnder}</div>
+      ${shop}
     </div>`;
 }
 
@@ -466,7 +479,7 @@ async function renderSingle(d, odds) {
 
     ${summaryCards(d)}
 
-    <div class="section-title">High ${d.high} · Median ${d.median} · Low ${d.low}</div>
+    <div class="section-title">High ${d.high} · Median ${d.median} · Low ${d.low} · σ ${d.stdev} · Confidence: ${d.confidence}</div>
 
     <div class="section-title">🏥 ${d.team} Injury Report</div>
     ${injuriesBlock(inj)}

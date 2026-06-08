@@ -343,11 +343,17 @@ td.num, th.num { text-align: right; }
   align-items: center;
   gap: 0.6rem;
 }
-.ll-main { display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap; }
+.liveline { flex-direction: column; align-items: stretch; }
+.ll-main { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
 .ll-book { font-weight: 800; color: var(--accent); }
 .ll-line { font-size: 1.2rem; font-weight: 700; }
 .ll-prices { color: var(--muted); font-size: 0.9rem; }
 .ll-edge { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.ll-best-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.6rem; }
+.ll-best { font-size: 0.85rem; color: var(--green); }
+.ll-best b { color: var(--text); }
+.ll-table { margin-top: 0.7rem; font-size: 0.85rem; }
+.ll-table th { color: var(--muted); }
 
 td.venue { color: var(--muted); font-size: 0.85rem; }
 .muted { color: var(--muted); }
