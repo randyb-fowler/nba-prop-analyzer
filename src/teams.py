@@ -42,6 +42,17 @@ def team_name(abbr: str) -> str:
     return TEAMS.get(abbr, {}).get("name", abbr)
 
 
+def abbr_for_name(full_name: str) -> str | None:
+    """Reverse lookup: full team name -> abbreviation (case-insensitive)."""
+    if not full_name:
+        return None
+    target = full_name.strip().lower()
+    for abbr, t in TEAMS.items():
+        if t["name"].lower() == target:
+            return abbr
+    return None
+
+
 def venue(abbr: str) -> dict:
     """Return {'arena', 'city'} for the host team's abbreviation."""
     t = TEAMS.get(abbr)

@@ -24,6 +24,7 @@ from src.props import (
     requires_pro, get_full_game_log,
 )
 from src.odds import get_player_line
+from src.defense import get_matchup
 from src.injuries import get_team_injuries
 from src.slate import get_slate, get_roster
 from src.teams import TEAMS
@@ -136,6 +137,20 @@ def odds(
     if not line:
         return {"available": False, "reason": "No live line for this player/stat."}
     return {"available": True, **line}
+
+
+@app.get("/api/defense")
+def defense(
+    opp: str = Query(..., min_length=2),
+    stat: str = Query(...),
+    season: str = Query(DEFAULT_SEASON),
+):
+    """Defense-adjusted matchup: how the opponent ranks at allowing this stat."""
+    try:
+        m = get_matchup(opp, stat, season)
+    except Exception:
+        return {"available": False}
+    return {"available": True, **m} if m else {"available": False}
 
 
 @app.get("/api/compare")

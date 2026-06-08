@@ -16,7 +16,7 @@ import requests
 
 from src.cache import ttl_cache
 from src.nba_stats import _normalize
-from src.teams import team_name
+from src.teams import team_name, abbr_for_name
 
 ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "")
 ODDS_CONFIGURED = bool(ODDS_API_KEY)
@@ -185,13 +185,21 @@ def get_player_line(player_name: str, stat: str, team_abbr: str) -> dict | None:
         return None
 
     best = best_lines(books)
+
+    # Identify the player's opponent in this matchup.
+    team_full = team_name(team_abbr)
+    home, away = event.get("home_team", ""), event.get("away_team", "")
+    opp_full = away if _normalize(home) == _normalize(team_full) else home
+    opp_abbr = abbr_for_name(opp_full)
+
     return {
         "line": best["consensus_line"],
         "books": books,
         "best_over": best["best_over"],
         "best_under": best["best_under"],
-        "home": event.get("home_team"),
-        "away": event.get("away_team"),
+        "home": home,
+        "away": away,
+        "opp": opp_abbr,
         "commence_time": event.get("commence_time"),
     }
 

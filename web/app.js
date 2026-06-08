@@ -309,7 +309,9 @@ form.addEventListener("submit", async (e) => {
       const res = await fetch(`/api/analyze?${params}`);
       if (!res.ok) throw new Error((await res.json()).detail || "Request failed");
       const data = await res.json();
-      await renderSingle(data, oddsInfo);
+      const oppAbbr = (oddsInfo && oddsInfo.opp) || opponent;
+      const matchup = oppAbbr ? await fetchDefense(oppAbbr, stat, season) : null;
+      await renderSingle(data, oddsInfo, matchup);
     }
     statusEl.textContent = "";
   } catch (err) {
@@ -462,7 +464,31 @@ function liveLineBlock(d, odds) {
     </div>`;
 }
 
-async function renderSingle(d, odds) {
+async function fetchDefense(opp, stat, season) {
+  try {
+    const params = new URLSearchParams({ opp, stat, season });
+    const res = await fetch(`/api/defense?${params}`);
+    return await res.json();
+  } catch {
+    return { available: false };
+  }
+}
+
+// Defense-adjusted matchup card.
+function matchupBlock(m, stat) {
+  if (!m || !m.available) return "";
+  const cls = m.difficulty === "Soft" ? "OVER" : m.difficulty === "Tough" ? "UNDER" : "PASS";
+  return `
+    <div class="section-title">🛡️ Matchup vs ${m.opp}</div>
+    <div class="liveline">
+      <div class="ll-main">
+        <span class="lean ${cls}">${m.difficulty} matchup</span>
+        <span class="muted">${m.opp_name} allow ${m.allowed} ${stat}/g · rank ${m.rank}/${m.of} (1 = toughest D)</span>
+      </div>
+    </div>`;
+}
+
+async function renderSingle(d, odds, matchup) {
   const dir = d.over ? "Over" : "Under";
   const inj = await fetchInjuries(d.team);
 
@@ -476,6 +502,8 @@ async function renderSingle(d, odds) {
     </div>
 
     ${liveLineBlock(d, odds)}
+
+    ${matchupBlock(matchup, d.stat)}
 
     ${summaryCards(d)}
 
