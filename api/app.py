@@ -4,22 +4,49 @@ Serves a JSON API plus the static single-page frontend in web/.
 Run with:  python -m uvicorn api.app:app --reload
 """
 
+import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from nba_api.stats.static import players
 
 from src.nba_stats import _normalize
-from src.props import analyze_prop, supported_stats, supported_seasons, DEFAULT_SEASON
+from src.props import analyze_prop, supported_stats, supported_seasons, DEFAULT_SEASON, requires_pro
 from src.injuries import get_team_injuries
 from src.slate import get_slate, get_roster
 from src.teams import TEAMS
+from src.db import init_db
+from src.auth import router as auth_router, get_current_user, user_payload, require_pro
+from src.billing import router as billing_router
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 app = FastAPI(title="NBA Prop Analyzer", version="1.0")
+
+# Signed-cookie sessions (used for OAuth state and the login session).
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("SECRET_KEY", "dev-insecure-secret-change-me"),
+    same_site="lax",
+    https_only=os.environ.get("APP_BASE_URL", "").startswith("https"),
+)
+
+app.include_router(auth_router)
+app.include_router(billing_router)
+
+
+@app.on_event("startup")
+def _startup():
+    init_db()
+
+
+@app.get("/api/me")
+def me(user=Depends(get_current_user)):
+    """Current user + Pro status (or {authenticated: false})."""
+    return user_payload(user)
 
 
 @app.get("/api/stats")
@@ -60,8 +87,14 @@ def analyze(
     over: bool = Query(True),
     opponent: str | None = Query(None),
     season: str = Query(DEFAULT_SEASON),
+    user=Depends(get_current_user),
 ):
     """Run a full prop analysis, optionally filtered to one opponent."""
+    if requires_pro(opponent, season) and not (user and user.is_pro):
+        raise HTTPException(
+            status_code=402,
+            detail="Opponent splits and past seasons are Pro features. Upgrade to unlock.",
+        )
     try:
         return analyze_prop(player, stat, line, over, season=season, opponent=opponent)
     except ValueError as e:
@@ -78,8 +111,9 @@ def compare(
     line: float = Query(...),
     over: bool = Query(True),
     season: str = Query(DEFAULT_SEASON),
+    user=Depends(require_pro),
 ):
-    """Run the same prop analysis for two players, side by side."""
+    """Run the same prop analysis for two players, side by side (Pro only)."""
     try:
         return {
             "a": analyze_prop(player_a, stat, line, over, season=season),

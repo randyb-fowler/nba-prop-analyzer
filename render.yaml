@@ -13,3 +13,22 @@ services:
       # that has prebuilt numpy/pandas wheels.
       - key: PYTHON_VERSION
         value: "3.12.8"
+      # Public URL — must match Google OAuth redirect + Stripe return URLs.
+      - key: APP_BASE_URL
+        value: "https://nba-prop-analyzer-w19a.onrender.com"
+      # Session signing key — Render generates a strong random value.
+      - key: SECRET_KEY
+        generateValue: true
+      # Secrets — set these in the Render dashboard (Environment tab), NOT here.
+      - key: DATABASE_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

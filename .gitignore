@@ -15,6 +15,10 @@ Thumbs.db
 # Misc
 *.log
 
+# Secrets / local DB
+.env
+*.db
+
 # Local Claude settings (machine-specific)
 .claude/settings.local.json
 

@@ -48,6 +48,16 @@ def supported_stats() -> list[str]:
     return list(STAT_DEFINITIONS.keys())
 
 
+def requires_pro(opponent: str | None, season: str) -> bool:
+    """Whether an analyze request needs a Pro subscription.
+
+    Free tier = single-player, current-season analysis. Opponent splits and
+    past/other seasons are Pro features. (Comparison is always Pro, enforced
+    at the route level.)
+    """
+    return bool(opponent) or season != DEFAULT_SEASON
+
+
 @ttl_cache(3600)  # game logs change at most once a day; 1h is plenty
 def get_full_game_log(player_id: int, season: str = DEFAULT_SEASON) -> list[dict]:
     """Return every game this season as enriched rows (most recent first)."""

@@ -29,10 +29,13 @@ async function loadTeams() {
   }
 }
 
+let defaultSeason = "2024-25";
+
 async function loadSeasons() {
   try {
     const res = await fetch("/api/seasons");
     const data = await res.json();
+    defaultSeason = data.default || defaultSeason;
     seasonSelect.innerHTML = data.seasons
       .map((s) => `<option value="${s}" ${s === data.default ? "selected" : ""}>${s}</option>`)
       .join("");
@@ -40,6 +43,100 @@ async function loadSeasons() {
     seasonSelect.innerHTML = `<option value="2024-25">2024-25</option>`;
   }
 }
+
+// --- Account / auth ------------------------------------------------------
+
+let currentUser = { authenticated: false, is_pro: false };
+const accountEl = document.getElementById("account");
+
+async function loadAccount() {
+  try {
+    const res = await fetch("/api/me");
+    currentUser = await res.json();
+  } catch {
+    currentUser = { authenticated: false, is_pro: false };
+  }
+  renderAccount();
+  applyGating();
+}
+
+function renderAccount() {
+  if (!currentUser.authenticated) {
+    accountEl.innerHTML = `<a class="btn-google" href="/api/auth/login">Sign in with Google</a>`;
+    return;
+  }
+  const badge = currentUser.is_pro
+    ? `<span class="pro-badge">PRO</span><button id="manage-btn" class="btn-plain">Manage</button>`
+    : `<button id="upgrade-btn" class="btn-upgrade">Upgrade to Pro</button>`;
+  accountEl.innerHTML = `
+    ${badge}
+    <span class="acct-name">${currentUser.name || currentUser.email}</span>
+    <button id="logout-btn" class="btn-plain">Sign out</button>`;
+
+  const logout = document.getElementById("logout-btn");
+  if (logout) logout.addEventListener("click", async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    await loadAccount();
+  });
+  const upgrade = document.getElementById("upgrade-btn");
+  if (upgrade) upgrade.addEventListener("click", startCheckout);
+  const manage = document.getElementById("manage-btn");
+  if (manage) manage.addEventListener("click", openPortal);
+}
+
+// Redirect to Stripe Checkout. If not signed in, send to Google login first.
+async function startCheckout() {
+  if (!currentUser.authenticated) { window.location = "/api/auth/login"; return; }
+  try {
+    const res = await fetch("/api/billing/checkout", { method: "POST" });
+    if (!res.ok) throw new Error((await res.json()).detail || "Checkout failed");
+    const { url } = await res.json();
+    window.location = url;
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// Open the Stripe Billing Portal to manage/cancel.
+async function openPortal() {
+  try {
+    const res = await fetch("/api/billing/portal", { method: "POST" });
+    if (!res.ok) throw new Error((await res.json()).detail || "Could not open portal");
+    const { url } = await res.json();
+    window.location = url;
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// Lock Pro-only controls for non-subscribers (server enforces this too).
+function applyGating() {
+  const pro = !!currentUser.is_pro;
+  const playerB = document.getElementById("player-b");
+  const note = document.getElementById("gate-note");
+
+  playerB.disabled = !pro;
+  playerB.placeholder = pro ? "Stephen Curry" : "🔒 Pro feature";
+
+  oppSelect.disabled = !pro;
+  if (!pro) oppSelect.value = "";
+
+  [...seasonSelect.options].forEach((o) => {
+    o.disabled = !pro && o.value !== defaultSeason;
+  });
+  if (!pro) seasonSelect.value = defaultSeason;
+
+  if (!note) return;
+  if (pro) { note.innerHTML = ""; return; }
+  const action = currentUser.authenticated
+    ? `<button class="link-upgrade" id="gate-upgrade">Upgrade to Pro</button>`
+    : `<a class="link-upgrade" href="/api/auth/login">Sign in</a> to upgrade`;
+  note.innerHTML = `🔒 Comparison, opponent splits & past seasons are <b>Pro</b> features. ${action}`;
+  const gu = document.getElementById("gate-upgrade");
+  if (gu) gu.addEventListener("click", startCheckout);
+}
+
+loadAccount();
 
 // --- Today's slate -------------------------------------------------------
 
@@ -127,6 +224,7 @@ loadSlate();
 // (shareable links, e.g. /?player=Nikola+Jokic&stat=PRA&line=48.5).
 (async () => {
   await Promise.all([loadStats(), loadTeams(), loadSeasons()]);
+  applyGating();
   applyUrlParams();
 })();
 

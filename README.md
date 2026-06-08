@@ -35,6 +35,7 @@ guessing, you see how often a player has actually cleared a line.
 - 🎯 **Combo stats**: PTS, REB, AST, STL, BLK, 3PM, TOV, plus PRA / PR / PA / RA
 - 📈 **Game log** with every game marked HIT or MISS against the line
 - 🤖 **Lean engine** weighting recent form and the average-vs-line margin
+- 🔐 **Accounts** (Google sign-in) with a **Pro** tier via Stripe — comparison, opponent splits, and past seasons are Pro features (server-enforced)
 - ✅ **Unit-tested** prop engine (`pytest`)
 - 🖥️ Also includes the original **command-line tool** for quick game-log lookups
 
@@ -131,6 +132,9 @@ python main.py "LeBron James"
 | `GET /api/injuries?team=LAL`                         | Team injury report (via ESPN)     |
 | `GET /api/slate?date=2025-01-15`                     | Games on a date (defaults today)  |
 | `GET /api/roster?team=BOS`                           | A team's roster                   |
+| `GET /api/me`                                        | Current user + Pro status         |
+| `GET /api/auth/login` · `/callback` · `POST /logout` | Google OAuth sign-in              |
+| `POST /api/billing/checkout` · `/portal` · `/webhook`| Stripe subscription flow          |
 
 Example:
 
@@ -163,6 +167,37 @@ The production start command (used by every platform) is:
 ```bash
 uvicorn api.app:app --host 0.0.0.0 --port $PORT
 ```
+
+## Accounts & Pro tier (Phase 2)
+
+Sign-in is **Google OAuth**; user data lives in **Postgres** (Neon in prod;
+SQLite locally with zero setup). Premium features are **server-enforced** — the
+frontend locks them, and the API independently returns `402`/`401`:
+
+| Tier | What you get |
+|------|--------------|
+| **Free / anonymous** | Single-player analysis, current season, today's slate |
+| **Pro** ($9.99/mo) | Player comparison, opponent splits, all past seasons |
+
+### Configuration
+
+Copy `.env.example` → `.env` (gitignored) and fill in:
+
+| Var | Purpose |
+|-----|---------|
+| `SECRET_KEY` | Session cookie signing |
+| `APP_BASE_URL` | Public URL (OAuth redirect + Stripe return) |
+| `DATABASE_URL` | Neon Postgres (unset → local SQLite) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth client |
+| `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | Stripe billing |
+
+External setup (each is free): a **Neon** project, a **Google Cloud** OAuth
+client (redirect URI `{APP_BASE_URL}/api/auth/callback`), and a **Stripe**
+account in test mode with a recurring Price and a webhook to
+`{APP_BASE_URL}/api/billing/webhook`. In production set the secrets in Render's
+**Environment** tab (the non-secret `APP_BASE_URL`/`SECRET_KEY` come from
+`render.yaml`). The app boots and runs without these — auth/billing routes just
+return `503` until configured.
 
 ## Running the tests
 
