@@ -276,7 +276,7 @@ form.addEventListener("submit", async (e) => {
   const player = document.getElementById("player").value.trim();
   const playerB = document.getElementById("player-b").value.trim();
   const stat = statSelect.value;
-  const line = document.getElementById("line").value;
+  let line = document.getElementById("line").value;
   const over = document.getElementById("over").value;
   const opponent = oppSelect.value;
   const season = seasonSelect.value;
@@ -295,12 +295,21 @@ form.addEventListener("submit", async (e) => {
       const data = await res.json();
       await renderCompare(data);
     } else {
+      // Try to pull a live sportsbook line; auto-fill it if the user left Line blank.
+      const oddsInfo = await fetchLiveLine(player, stat, season);
+      if (!line && oddsInfo?.available) {
+        line = oddsInfo.line;
+        document.getElementById("line").value = line;
+      }
+      if (!line) {
+        throw new Error("No live line available — enter a line manually.");
+      }
       const params = new URLSearchParams({ player, stat, line, over, season });
       if (opponent) params.set("opponent", opponent);
       const res = await fetch(`/api/analyze?${params}`);
       if (!res.ok) throw new Error((await res.json()).detail || "Request failed");
       const data = await res.json();
-      await renderSingle(data);
+      await renderSingle(data, oddsInfo);
     }
     statusEl.textContent = "";
   } catch (err) {
@@ -403,7 +412,44 @@ async function fetchInjuries(teamAbbr) {
   }
 }
 
-async function renderSingle(d) {
+async function fetchLiveLine(player, stat, season) {
+  try {
+    const params = new URLSearchParams({ player, stat, season });
+    const res = await fetch(`/api/odds?${params}`);
+    return await res.json();
+  } catch {
+    return { available: false };
+  }
+}
+
+function fmtPrice(p) {
+  if (p === null || p === undefined) return "";
+  return p > 0 ? `+${p}` : `${p}`;
+}
+
+// "Live Line" card: the real book line vs the player's season avg.
+function liveLineBlock(d, odds) {
+  if (!odds || !odds.available) return "";
+  const edge = Math.round((d.summary.season.avg - odds.line) * 10) / 10;
+  const dir = edge > 0 ? "OVER" : edge < 0 ? "UNDER" : "EVEN";
+  const cls = edge > 0 ? "OVER" : edge < 0 ? "UNDER" : "PASS";
+  const game = odds.away && odds.home ? `${odds.away} @ ${odds.home}` : "";
+  return `
+    <div class="section-title">📈 Live Line</div>
+    <div class="liveline">
+      <div class="ll-main">
+        <span class="ll-book">${odds.book}</span>
+        <span class="ll-line">${d.stat} ${odds.line}</span>
+        <span class="ll-prices">O ${fmtPrice(odds.over_price)} / U ${fmtPrice(odds.under_price)}</span>
+      </div>
+      <div class="ll-edge">
+        <span class="lean ${cls}">${dir} edge</span>
+        <span class="muted">season avg ${d.summary.season.avg} (${edge >= 0 ? "+" : ""}${edge} vs book)${game ? " · " + game : ""}</span>
+      </div>
+    </div>`;
+}
+
+async function renderSingle(d, odds) {
   const dir = d.over ? "Over" : "Under";
   const inj = await fetchInjuries(d.team);
 
@@ -415,6 +461,8 @@ async function renderSingle(d) {
       </div>
       <span class="lean ${d.lean}">${d.lean}</span>
     </div>
+
+    ${liveLineBlock(d, odds)}
 
     ${summaryCards(d)}
 

@@ -18,8 +18,12 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from nba_api.stats.static import players
 
-from src.nba_stats import _normalize
-from src.props import analyze_prop, supported_stats, supported_seasons, DEFAULT_SEASON, requires_pro
+from src.nba_stats import _normalize, find_player
+from src.props import (
+    analyze_prop, supported_stats, supported_seasons, DEFAULT_SEASON,
+    requires_pro, get_full_game_log,
+)
+from src.odds import get_player_line
 from src.injuries import get_team_injuries
 from src.slate import get_slate, get_roster
 from src.teams import TEAMS
@@ -106,6 +110,32 @@ def analyze(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:  # network / API errors from nba_api
         raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
+
+
+@app.get("/api/odds")
+def odds(
+    player: str = Query(..., min_length=1),
+    stat: str = Query(...),
+    season: str = Query(DEFAULT_SEASON),
+):
+    """Live sportsbook line for a player's prop in their upcoming game.
+
+    Returns {available: true, book, line, over_price, under_price, home, away,
+    commence_time} or {available: false, reason}. Never errors on missing odds.
+    """
+    try:
+        p = find_player(player)
+        games = get_full_game_log(p["id"], season)
+        team_abbr = games[0]["team"] if games else ""
+        line = get_player_line(p["full_name"], stat, team_abbr)
+    except ValueError as e:
+        return {"available": False, "reason": str(e)}
+    except Exception:
+        return {"available": False, "reason": "Odds lookup failed."}
+
+    if not line:
+        return {"available": False, "reason": "No live line for this player/stat."}
+    return {"available": True, **line}
 
 
 @app.get("/api/compare")
